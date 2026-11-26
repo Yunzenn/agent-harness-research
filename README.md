@@ -1,4 +1,4 @@
-# Agent Harness Research
+# Harness Lab
 
 **循环、工作流选型，以及一个能按场景选拓扑并加速执行的工具。**
 *Loops, workflow selection, and a small toolkit that picks a topology per scenario and makes it faster.*
@@ -25,8 +25,8 @@
 ### 30 秒上手
 
 ```powershell
-git clone https://github.com/Yunzenn/agent-harness-research.git
-cd agent-harness-research
+git clone https://github.com/Yunzenn/harness-lab.git
+cd harness-lab
 $env:PYTHONPATH="loopkit"
 
 # 1) 描述业务，拿到拓扑、预算、闸门和理由
@@ -145,8 +145,8 @@ In one line: **the notes explain *why*; `loopkit` is the smallest executable ver
 ### Quickstart
 
 ```powershell
-git clone https://github.com/Yunzenn/agent-harness-research.git
-cd agent-harness-research
+git clone https://github.com/Yunzenn/harness-lab.git
+cd harness-lab
 
 $env:PYTHONPATH="loopkit"
 python -m loopkit advise --goal "refund duplicate charges" --oracle rubric --blast irreversible --heterogeneity many

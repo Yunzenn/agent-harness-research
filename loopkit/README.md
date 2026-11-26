@@ -31,7 +31,7 @@
 不需要安装，把目录放进 `PYTHONPATH` 即可：
 
 ```powershell
-$env:PYTHONPATH="D:\path\to\agent-harness-research\loopkit"
+$env:PYTHONPATH="D:\path\to\harness-lab\loopkit"
 python -m loopkit advise --goal "fix failing tests" --oracle code --blast write
 python -m loopkit demo
 python -m loopkit bench
@@ -220,7 +220,7 @@ The gap is not "can it orchestrate" — it is **whether selection itself is code
 No install needed; put the directory on `PYTHONPATH`:
 
 ```powershell
-$env:PYTHONPATH="D:\path\to\agent-harness-research\loopkit"
+$env:PYTHONPATH="D:\path\to\harness-lab\loopkit"
 python -m loopkit advise --goal "fix failing tests" --oracle code --blast write
 python -m loopkit demo
 python -m loopkit bench

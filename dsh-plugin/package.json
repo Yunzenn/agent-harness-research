@@ -1,0 +1,31 @@
+{
+  "name": "dsh-loopkit",
+  "version": "0.1.0",
+  "description": "DSH plugin: advise a workflow topology from a business brief (port of loopkit.advisor)",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js"
+  },
+  "files": [
+    "index.js",
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node --test"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/dsh-tools": "*"
+  },
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "agent",
+    "harness",
+    "workflow",
+    "orchestration"
+  ],
+  "license": "MIT",
+  "author": "yunzenn"
+}

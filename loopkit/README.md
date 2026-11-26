@@ -105,12 +105,12 @@ print(result.line())
 
 | 负载 | 基线 | 优化后 | 加速 | token 变化 | 说明 |
 |---|---:|---:|---:|---:|---|
-| 12 docs | 2.24s | 0.38s | **6.0x** | -38% | 单上下文串行 vs 6 路扇出（隔离上下文） |
+| 12 docs | 2.24s | 0.38s | **5.9x** | -38% | 单上下文串行 vs 6 路扇出（隔离上下文） |
 | 24 tickets | 6.69s | 1.11s | **6.0x** | -75% | 12 个工具的全量 schema vs 3 个窄工具 + 6 路并发 |
-| bugfix loop | 0.55s | 0.38s | **1.5x** | -30% | 逐个读 vs 并行读；重复 `run_tests` 命中缓存 |
+| bugfix loop | 0.55s | 0.38s | **1.4x** | -30% | 逐个读 vs 并行读；重复 `run_tests` 命中缓存 |
 | 合计 | 9.47s | 1.86s | **5.1x** | | |
 
-**怎么读**：延迟是模拟的，测的是编排开销，不是模型能力；bugfix 只有 1.5x 是 Amdahl（4 次模型调用是串行下限）；token 下降是真的（`prompt_chars` 累加每次请求的完整上下文）。
+**怎么读**：延迟是模拟的，测的是编排开销，不是模型能力；bugfix 只有 1.4x 是 Amdahl（4 次模型调用是串行下限）；token 下降是真的（`prompt_chars` 累加每次请求的完整上下文）。
 
 ### 架构
 
@@ -277,12 +277,12 @@ Simulated 80 ms per model call, 50 ms per tool call; best of 2 runs.
 
 | Workload | Baseline | Optimized | Speedup | Token change |
 |---|---:|---:|---:|---:|
-| 12 docs | 2.24s | 0.38s | **6.0x** | -38% |
+| 12 docs | 2.24s | 0.38s | **5.9x** | -38% |
 | 24 tickets | 6.69s | 1.11s | **6.0x** | -75% |
-| bugfix loop | 0.55s | 0.38s | **1.5x** | -30% |
+| bugfix loop | 0.55s | 0.38s | **1.4x** | -30% |
 | Total | 9.47s | 1.86s | **5.1x** | |
 
-**How to read it**: latency is simulated, so this measures orchestration overhead rather than model quality; 1.5x on the bugfix loop is Amdahl (four model calls are a serial floor); the token reductions are real, because `prompt_chars` counts the full context re-sent on every step.
+**How to read it**: latency is simulated, so this measures orchestration overhead rather than model quality; 1.4x on the bugfix loop is Amdahl (four model calls are a serial floor); the token reductions are real, because `prompt_chars` counts the full context re-sent on every step.
 
 ### Architecture
 

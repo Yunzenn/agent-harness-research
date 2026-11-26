@@ -27,16 +27,17 @@
 ```powershell
 git clone https://github.com/Yunzenn/agent-harness-research.git
 cd agent-harness-research
+$env:PYTHONPATH="loopkit"
 
 # 1) 描述业务，拿到拓扑、预算、闸门和理由
 python -m loopkit advise --goal "refund duplicate charges" --oracle rubric `
     --blast irreversible --heterogeneity many
 
 # 2) 看同一个 kernel 跑四种控制流
-$env:PYTHONPATH="loopkit"; python -m loopkit demo
+python -m loopkit demo
 
 # 3) 基线 vs 优化，实测
-$env:PYTHONPATH="loopkit"; python -m loopkit bench
+python -m loopkit bench
 
 # 4) 测试
 cd loopkit; python -m unittest discover -s tests -t .

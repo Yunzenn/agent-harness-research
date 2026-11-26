@@ -20,6 +20,7 @@ from .patterns import Lane, Stage, WorkerResult, chain, fanout, human_gate, plan
 from .session import SessionLog
 from .tools import Param, Registry, Tool, ToolError
 from .types import Action, Budget, RunResult, Stop, ToolCall, ToolResult
+from .upgrade import GuardConfig, LoopGuard, LoopStats, ToolBox, ToolDenied
 
 __version__ = "0.1.0"
 
@@ -27,8 +28,11 @@ __all__ = [
     "Action",
     "Brief",
     "Budget",
+    "GuardConfig",
     "Harness",
     "Lane",
+    "LoopGuard",
+    "LoopStats",
     "MockProvider",
     "OpenAICompatProvider",
     "Param",
@@ -41,7 +45,9 @@ __all__ = [
     "Stop",
     "Tiered",
     "Tool",
+    "ToolBox",
     "ToolCall",
+    "ToolDenied",
     "ToolError",
     "ToolResult",
     "WorkerResult",

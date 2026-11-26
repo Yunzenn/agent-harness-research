@@ -1,16 +1,50 @@
-# loopkit
+﻿# loopkit
 
-**按业务场景选拓扑，并把执行变快的最小 agent harness。**
-*A tiny agent harness that picks a topology from a business brief — and makes it faster.*
+**给已有 loop 加装的一层：预算、去重缓存、重复拦截、轨迹指标。**
+*A hardening layer for loops you already have: budgets, caching, repeat interception, traces.*
 
 [中文](#中文) · [English](#english)
+
+> 主推入口是 [`loopkit/upgrade.py`](loopkit/upgrade.py)：`LoopGuard` + `ToolBox`，不改你的控制流。
+> 本文其余部分是**参考实现**（kernel / patterns / advisor），用来跑基准与验证"哪种拓扑更便宜"。
+> 定位与非目标见 [`docs/POSITIONING.md`](../docs/POSITIONING.md)。
 
 ---
 
 <a id="中文"></a>
 ## 中文
 
-纯标准库、无运行时依赖、约 1200 行、20 项测试。它不试图取代 LangGraph 或 Temporal：它补的是这两类工具都不管的那一层——**「这个业务该用哪种工作流」以及「怎么让它跑得更快」**。
+纯标准库、无运行时依赖、30 项测试。
+
+**先看加装层**（10 行，循环不动）：
+
+```python
+from loopkit.upgrade import GuardConfig, LoopGuard, ToolBox, ToolDenied
+
+guard = LoopGuard(GuardConfig(max_steps=12, max_tool_calls=20, cache_ttl_s=60))
+box = ToolBox({"read": read_file}, guard=guard)
+
+while True:
+    if guard.begin_step(tokens_in=usage):
+        break
+    try:
+        out = box.call("read", {"path": "a.py"})
+    except ToolDenied as exc:
+        out = f"skipped: {exc.reason}"
+```
+
+同一段循环，只换调用层（40ms 工具）：
+
+| 场景 | 裸循环执行 | 加装后 | 降幅 | 停止原因 |
+|---|---:|---:|---:|---|
+| 12 个工单（重复读两遍） | 24 | 12 | −50% | loop_exit |
+| 失控重试 | 50 | 12 | −76% | `max_tool_calls` |
+| 同一调用 x10 | 10 | 3 | −70% | loop_exit |
+
+复现：`python bench/uplift_bench.py`。
+
+下面的内容（advisor、kernel、patterns）是**参考实现**：它们存在的意义是让"选型"和"加速"可测量，而不是让你迁移过去。
+
 
 ### 为什么不用现成框架
 
@@ -41,7 +75,7 @@ python -m loopkit bench
 
 ```powershell
 cd loopkit
-python -m unittest discover -s tests -t .     # 20 项
+python -m unittest discover -s tests -t .     # 30 项
 python bench/bench.py                         # 写入 bench/RESULTS.md
 ```
 
@@ -99,7 +133,7 @@ print(result.line())
 | 合规初审 | `oracle=human, blast=read` | L1 chain + 人工终审 |
 | 运维值班 | `lifetime=days, blast=irreversible` | L7 + 检查点 + 幂等 + 逐次审批 |
 
-### 实测
+### 参考实现的实测（拓扑对比）
 
 模拟模型 80ms/次、工具 50ms/次；每项取 2 次运行的最小值。
 
@@ -199,7 +233,36 @@ MIT License.
 <a id="english"></a>
 ## English
 
-Standard library only, no runtime dependencies, ~1200 lines, 20 tests. It does not try to replace LangGraph or Temporal: it fills the layer neither of them covers — **which workflow this business needs, and how to make it faster**.
+Standard library only, no runtime dependencies, 30 tests.
+
+**Start with the upgrade layer** (10 lines, your loop untouched):
+
+```python
+from loopkit.upgrade import GuardConfig, LoopGuard, ToolBox, ToolDenied
+
+guard = LoopGuard(GuardConfig(max_steps=12, max_tool_calls=20, cache_ttl_s=60))
+box = ToolBox({"read": read_file}, guard=guard)
+
+while True:
+    if guard.begin_step(tokens_in=usage):
+        break
+    try:
+        out = box.call("read", {"path": "a.py"})
+    except ToolDenied as exc:
+        out = f"skipped: {exc.reason}"
+```
+
+Same loop, only the call layer swapped (40 ms tools):
+
+| Scenario | Bare | Wrapped | Δ | Stop |
+|---|---:|---:|---:|---|
+| 12 tickets (read twice) | 24 | 12 | −50% | loop_exit |
+| Runaway retry | 50 | 12 | −76% | `max_tool_calls` |
+| Same call x10 | 10 | 3 | −70% | loop_exit |
+
+Reproduce: `python bench/uplift_bench.py`.
+
+Everything below (advisor, kernel, patterns) is the **reference implementation**: it exists so that topology choice and speedups are measurable — not so that you migrate onto it.
 
 ### Why not an existing framework
 
@@ -230,7 +293,7 @@ Or:
 
 ```powershell
 cd loopkit
-python -m unittest discover -s tests -t .     # 20 tests
+python -m unittest discover -s tests -t .     # 30 tests
 python bench/bench.py                         # writes bench/RESULTS.md
 ```
 
@@ -271,7 +334,7 @@ Missing parts are named explicitly (`pattern 'plan_verify' needs: planner, verif
 | Compliance review | `oracle=human, blast=read` | L1 chain + human sign-off |
 | On-call | `lifetime=days, blast=irreversible` | L7 + checkpoints + idempotency + per-action approval |
 
-### Measured
+### Reference implementation: topology comparison
 
 Simulated 80 ms per model call, 50 ms per tool call; best of 2 runs.
 
@@ -365,3 +428,4 @@ Any `/chat/completions` endpoint works. `transport` is injectable, so request/re
 - [ ] Re-run the benchmark against a real model
 
 MIT License.
+

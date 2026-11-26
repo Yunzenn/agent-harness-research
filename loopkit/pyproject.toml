@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "loopkit"
+version = "0.1.0"
+description = "场景自适应 + 加速的最小 agent harness：按 brief 选拓扑，内置并行、缓存、去重与模型分层"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "yunzenn" }]
+keywords = ["agents", "harness", "workflow", "orchestration", "llm"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+]
+dependencies = []
+
+[project.scripts]
+loopkit = "loopkit.cli:main"
+
+[project.optional-dependencies]
+dev = []
+
+[tool.setuptools]
+packages = ["loopkit"]
+
+[tool.setuptools.package-data]
+loopkit = ["py.typed"]

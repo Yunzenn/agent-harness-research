@@ -1,108 +1,219 @@
-# Agent Harness 研究：循环、工作流与四种扩展面
+# Agent Harness Research
 
-> 一次针对 Codex / Claude Code / DSH 这类 harness 的拆解，目标是回答一个具体问题：
-> **面对不同业务场景，应该把 agent 的 loop 和工作流设计成什么样？**
+**循环、工作流选型，以及一个能按场景选拓扑并加速执行的工具。**
+*Loops, workflow selection, and a small toolkit that picks a topology per scenario and makes it faster.*
 
-这不是框架评测，是**设计手册**：五个判据、八级架构阶梯、十张模式卡、八个场景蓝图、一套失败与放权机制，外加一个可运行的最小内核用来验证论断。
+[中文](#中文) · [English](#english)
 
 ---
 
-## 怎么读
+<a id="中文"></a>
+## 中文
 
-| 你的目的 | 读这些 | 时间 |
+### 这是什么
+
+仓库有两部分，互为表里：
+
+| 部分 | 内容 | 形态 |
 |---|---|---|
-| 先看结论 | 下面「十条结论」 | 5 分钟 |
-| 要设计一个新 agent | [02 选型地图](02-scenario-to-workflow.md) → [01 循环内核](01-loop-kernel.md) | 40 分钟 |
-| 要接工具/技能/MCP | [03 扩展面](03-tools-skills-mcp.md) | 30 分钟 |
-| 要上线/评估 | [04 失败与放权](04-failure-and-eval.md) | 25 分钟 |
-| 要动手 | `loop_lab/`（纯标准库，离线可跑） | 20 分钟 |
-| 要溯源/深挖 | [05 资料库](05-sources.md) | — |
+| **研究笔记**（`01`–`05`） | Codex / Claude Code / DSH 的 harness 拆解；业务场景 → 工作流的选型地图；工具、技能、MCP、子代理四种扩展面；失败分类与放权 | 5 篇长文 |
+| **`loopkit/`** | 把笔记里的结论写成可执行代码：按 brief 选拓扑 + 并行/缓存/去重/模型分层 | Python 库，纯标准库，20 项测试 |
+| `loop_lab/` | 更早的原型：5 个业务场景共用同一个 kernel，逐条打印轨迹与成本 | Python 脚本 |
 
----
+一句话：**笔记解释「为什么」，`loopkit` 是那些结论的最小可执行版本。**
 
-## 十条结论
-
-1. **agent = 模型 + harness。** 同一模型换一套 harness，表现能差一个档；反过来，harness 差，换更强的模型只是让错误更自信。
-2. **循环内核只有九个问题**，真正决定质量的是四行：上下文怎么组装、事实怎么记账、调用怎么配对、**谁来宣布结束**。其余（HTTP、流式、重试）是工程细节。
-3. **`final` 不等于成功。** 模型说「做完了」只是文本。把这句话当停止条件，等于让考生自己判卷——这是最常见、也最贵的 harness 缺陷。
-4. **选工作流的主轴是「判据密度」，不是任务难度。** 测试/编译器/schema 在，循环可以又笨又自由；只剩人的判断时，循环不该闭合在模型上。
-5. **成本的主变量是步数 × 每步固定开销。** 工具越多，每一步都越贵。一个「只调一次工具」的会话已经要为全部工具 schema 付费。
-6. **扇出买的是峰值，不是总账。** 6 个工人总 token 更高，但最大单次上下文几乎砍半。用不用，取决于你怕「上下文退化」还是怕「账单」。
-7. **工具、技能、MCP、子代理是四个轴，不是四个竞品。** 能力 / 判断 / 供应链 / 上下文隔离。混着用是当前 agent 工程最大的浪费来源。
-8. **MCP 是所有权边界的产物，不是先进性。** 工具只有自己用、且同进程，直接实现更便宜、更安全。
-9. **失败主要是设计问题，不是模型问题**（MAST：41%–86.7% 的多智能体失败率）。**症状出现在循环层，根因通常在接口层**——先改工具和契约，别先改提示词。
-10. **放权是渐进的，降级要可触发。** 没有降级机制的系统只会越来越贵，不会越来越好。
-
----
-
-## 文件地图
-
-```
-harness-research/
-├── README.md                    ← 你在这里
-├── 01-loop-kernel.md            循环内核：9 个问题、8 条不变量、成本模型、停止条件、失败收尾
-├── 02-scenario-to-workflow.md   五判据 → L0–L7 阶梯 → 10 张模式卡 → 8 个场景蓝图 → 选型流程
-├── 03-tools-skills-mcp.md       四种扩展面的分工、工具经济学、技能写什么、MCP 信任红线、子代理契约
-├── 04-failure-and-eval.md       MAST 失败分类、诊断表、三层评估、四本预算、四级放权
-├── 05-sources.md                一手资料库（本地插件 README + 官方文档 + 论文），带「读它为了什么」
-└── loop_lab/                    可运行的最小 harness（纯标准库、离线、确定性）
-    ├── kernel.py                日志/工具/预算/循环/控制器
-    ├── scenarios.py             5 个业务场景
-    ├── run_all.py               跑全部 + 成本表 + 自检
-    └── README.md                设计与局限
-```
-
----
-
-## 快速开始
+### 30 秒上手
 
 ```powershell
-cd D:\pai0.7\harness-research\loop_lab
-python run_all.py            # 全部轨迹 + 成本表
-python run_all.py --quiet    # 只看表
+git clone https://github.com/Yunzenn/agent-harness-research.git
+cd agent-harness-research
+
+# 1) 描述业务，拿到拓扑、预算、闸门和理由
+python -m loopkit advise --goal "refund duplicate charges" --oracle rubric `
+    --blast irreversible --heterogeneity many
+
+# 2) 看同一个 kernel 跑四种控制流
+$env:PYTHONPATH="loopkit"; python -m loopkit demo
+
+# 3) 基线 vs 优化，实测
+$env:PYTHONPATH="loopkit"; python -m loopkit bench
+
+# 4) 测试
+cd loopkit; python -m unittest discover -s tests -t .
 ```
 
-输出（实测，字符/token 为估算）：
+`advise` 的输出不是一句「建议用 ReAct」，而是一份可评审的计划：
 
 ```
-scenario      pattern                    steps  calls  total_chars  peak_chars  ~tokens_in  outcome
-S1 bugfix     ReAct + external judge         3      6        6,165       2,539       1,541  ok/tests_pass
-S2a prose     ReAct (self-judged)            2      1        3,024       1,660         756  ok/final_answer
-S2b prose     plan-execute-verify            5      1        6,352       1,964       1,588  ok/final_answer
-S3a research  single context                 4      3        8,144       2,498       2,036  ok/final_answer
-S3b research  orchestrator-workers           6      0        9,585       1,599       2,396  ok/merged
-S4 T-1        router + bounded flow          3      2        1,176         727         294  ok/triaged
-S5a refund    guard + human gate (L7)        2      2        3,434       1,856         858  awaiting_human/approval_required
-S5b refund    resume from log                1      1        2,162       2,162         540  ok/refunded
-9/9 checks passed
+计划：L2 / route
+  拓扑    L2 / route
+  并发    4
+  工具面  narrow-per-lane
+  闸门    approval: 每个不可逆动作（代码路径，非提示）; human: 产出必须经人确认才算完成
+  预算    max_steps=6, max_tool_calls=16, max_tokens_in=400000, max_seconds=60.0
+  模型分层  router->small, exec->large
+理由：
+  - 需求分成多类且每类工具不同：先分类再进窄车道，避免一套工具打天下
+  - 车道内并发 4；每条车道有独立步数上限，防止单条失控
+  - 每类需求只暴露它需要的 3–6 个工具：省 token，也减少选错
+  - 存在不可逆副作用：闸门必须由控制层执行，且拒绝不可被提示词推翻
 ```
 
-**读这张表的正确方式**：不要看绝对数字（模型是脚本化的），看**结构**——同一个 kernel，五种控制流，成本与风险的差异全部可测量、可对比、可回归。
+### 五条结论
+
+1. **选工作流的主轴是「判据密度」，不是任务难度。** 测试、编译器、schema 在，循环可以又笨又自由；判据只在人心里，循环就不该闭合在模型上。
+2. **`final` 不等于成功。** 模型说「做完了」只是文本；把这句话当停止条件，等于让考生自己判卷。
+3. **成本的主变量是步数 × 每步固定开销。** 工具越多每一步都越贵；扇出买的是「峰值上下文」，不省总账。
+4. **工具、技能、MCP、子代理是四个轴，不是竞品。** 能力 / 判断 / 供应链 / 上下文隔离。
+5. **失败主要是设计问题。** 症状出现在循环层，根因通常在接口层——先改工具和契约，别先改提示词。
+
+### 实测（loopkit）
+
+模拟模型 80ms/次、工具 50ms/次；测的是**编排开销**，不是模型能力。
+
+| 负载 | 基线 | 优化后 | 加速 | token 变化 |
+|---|---:|---:|---:|---:|
+| 12 docs（串行 vs 6 路扇出） | 2.24s | 0.38s | **6.0x** | -38% |
+| 24 tickets（12 工具面 vs 3 窄工具 + 6 路并发） | 6.69s | 1.11s | **6.0x** | -75% |
+| bugfix loop（并行读 + 缓存） | 0.55s | 0.38s | **1.5x** | -30% |
+| 合计 | 9.47s | 1.86s | **5.1x** | |
+
+为什么 bugfix 只有 1.5x：4 次模型调用是串行下限，并发改不了它（Amdahl）。
+
+### 仓库结构
+
+```
+.
+├── 01-loop-kernel.md            循环内核：9 个问题、8 条不变量、成本模型、停止条件、失败收尾
+├── 02-scenario-to-workflow.md   五判据 → L0–L7 阶梯 → 10 模式卡 → 8 场景蓝图 → 选型流程
+├── 03-tools-skills-mcp.md       四种扩展面、工具经济学、技能硬预算、MCP 信任红线、子代理契约
+├── 04-failure-and-eval.md       MAST 失败分类、诊断表、三层评估、四本预算、四级放权
+├── 05-sources.md                一手资料库（DSH 插件 / 官方文档 / 论文），带「读它为了什么」
+├── loop_lab/                    早期原型：一个 kernel，五个业务场景，可逐行对照
+│   ├── kernel.py  scenarios.py  run_all.py  README.md
+└── loopkit/                     工具：advisor + kernel + patterns + 加速层
+    ├── loopkit/advisor.py       场景 → 拓扑（规则引擎，输出理由）
+    ├── loopkit/kernel.py        循环：日志、预算、工具批次、停止谓词
+    ├── loopkit/patterns.py      react / chain / route / fanout / plan_execute_verify
+    ├── loopkit/tools.py         校验、守卫、缓存、去重、有界并发
+    ├── loopkit/llm.py           MockProvider / Tiered / OpenAI 兼容
+    ├── bench/bench.py           基线 vs 优化的实测
+    └── tests/test_loopkit.py    20 项不变量测试
+```
+
+### 七条不变量
+
+任何 harness 都可以用这七条体检；`loopkit` 的测试就是它们的回归：
+
+1. 日志是唯一真相（可回放）。
+2. 每个工具调用恰好一个结果（失败也是结果）。
+3. 停止条件在模型之外。
+4. 四本预算独立：步数 / 工具调用 / token / 墙钟。
+5. 拒绝是代码路径，不是提示词建议。
+6. 工具 schema 即提示词（只投影模型需要的字段）。
+7. 不可逆动作是屏障：串行、不缓存、需审批。
+
+### 局限
+
+- 模拟延迟，不是真实模型；真实长尾会让加速比下降。
+- 线程不是 asyncio；没有压缩与持久缓存。
+- advisor 阈值是经验值，需要用真实轨迹校准。
+- 研究笔记以中文为主，英文只在 README 与关键结论层。
+
+### 许可
+
+代码 MIT；研究笔记 CC BY 4.0。
 
 ---
 
-## 这份研究的边界
+<a id="english"></a>
+## English
 
-- **模型是脚本化的。** `loop_lab` 里的「模型」是确定性策略，用来暴露 harness 结构，不测量模型能力。它能证明「停止条件错了会假成功」，不能证明「GPT-x 比 Y 强」。
-- **没有真并发。** `parallel_safe` 是标注，执行是顺序的；扇出的成本按串行累加。
-- **第三方 harness 的细节以官方文档为准。** Codex / Claude Code 的机制在 [05](05-sources.md) 里给了一手链接，本机无法运行它们做对照实验。
-- **场景蓝图是合成出来的。** B1–B8 是从公开实践与本地插件设计中归纳的设计模式，不是对某家公司的复刻。
+### What this is
 
----
+Two halves of one argument:
 
-## 还没想清楚的问题（欢迎继续钻）
+| Part | Content | Shape |
+|---|---|---|
+| **Research notes** (`01`–`05`) | Teardown of Codex / Claude Code / DSH harnesses; a scenario → workflow selection map; the four extension surfaces (tools, skills, MCP, subagents); failure taxonomy and staged autonomy | 5 long-form notes |
+| **`loopkit/`** | The notes turned into code: pick a topology from a brief, plus parallel execution, caching, deduplication, and model tiering | Python, stdlib only, 20 tests |
+| `loop_lab/` | Earlier prototype: five business scenarios on one kernel, with per-step traces and cost accounting | Python scripts |
 
-1. **判据密度能不能自动估计？** 现在靠人判断。如果能让模型从任务描述预测「该用哪级拓扑」，选型就能自动化——但也可能变成另一种自我评估。
-2. **降级的阈值怎么校准？** [02](02-scenario-to-workflow.md) 给了「工人采纳率 < 30% 就降级」这类信号，但 30% 是拍的。需要拿真实轨迹标定。
-3. **压缩的信息论下界是什么？** 哪些状态必须保留（决策、约束、未解问题、文件清单），哪些可以丢？现在靠摘要模型的手感。
-4. **「独立性」怎么度量？** 换上下文不等于换盲点。同一个基座模型的两个实例，相关性有多高？
-5. **KV cache 该不该作为一等设计约束？** DSH 把「提示词能不能在历史后追加」做成了路由能力（`systemPromptUpdate: 'in-history'`），代价是复杂度。这笔交易值不值？
-6. **代码模式（PTC）会取代工具调用吗？** 省 37%–98% token 很诱人，但调试从「读对话」变成「读程序」，运维成本转移到了别处。
-7. **跨会话记忆的边界在哪？** 什么该记、什么该忘、谁来批准？现在的做法（写文件）只是把问题推给了文件系统。
+In one line: **the notes explain *why*; `loopkit` is the smallest executable version of those conclusions.**
 
----
+### Quickstart
 
-## 一句话总结
+```powershell
+git clone https://github.com/Yunzenn/agent-harness-research.git
+cd agent-harness-research
 
-> 好的 harness 不是让模型更聪明，而是让**错误更便宜、正确更可验证、越权更难发生**。
-> 工作流的选择，本质上是在回答：**这个业务里，最便宜的可靠判据在哪？**
+$env:PYTHONPATH="loopkit"
+python -m loopkit advise --goal "refund duplicate charges" --oracle rubric --blast irreversible --heterogeneity many
+python -m loopkit demo
+python -m loopkit bench
+cd loopkit; python -m unittest discover -s tests -t .
+```
+
+`advise` does not say "use ReAct". It returns a reviewable plan — topology, concurrency, tool surface, gates, four budgets, model tiers, **and the reason for each choice** (reasons can be argued with, which is the point).
+
+### Five findings
+
+1. **The axis for choosing a workflow is verification density, not task difficulty.** With tests and compilers around, the loop can be dumb and free. When only a human can judge, the loop must not close on the model.
+2. **`final` is not success.** "I'm done" is just text; treating it as a stop condition is letting the candidate grade their own exam.
+3. **Cost is steps × fixed per-step overhead.** More tools make every step more expensive; fan-out buys a lower *peak* context, not a lower total bill.
+4. **Tools, skills, MCP, and subagents are four axes, not competitors.** Capability / judgement / supply chain / context isolation.
+5. **Failures are mostly design failures.** Symptoms show up in the loop; root causes usually live in the interface layer — fix the tool and the contract before the prompt.
+
+### Measured (loopkit)
+
+Simulated 80 ms per model call, 50 ms per tool call. These numbers isolate **orchestration overhead**, not model quality.
+
+| Workload | Baseline | Optimized | Speedup | Token change |
+|---|---:|---:|---:|---:|
+| 12 docs (serial vs 6-lane fan-out) | 2.24s | 0.38s | **6.0x** | -38% |
+| 24 tickets (12-tool surface vs 3 narrow + 6 lanes) | 6.69s | 1.11s | **6.0x** | -75% |
+| bugfix loop (parallel reads + cache) | 0.55s | 0.38s | **1.5x** | -30% |
+| Total | 9.47s | 1.86s | **5.1x** | |
+
+Why bugfix is only 1.5x: four model calls are a serial floor, and concurrency cannot change that (Amdahl).
+
+### Repository layout
+
+```
+.
+├── 01-loop-kernel.md            loop internals: 9 questions, 8 invariants, cost model, stopping, failure recovery
+├── 02-scenario-to-workflow.md   five dials → L0–L7 ladder → 10 pattern cards → 8 scenario blueprints
+├── 03-tools-skills-mcp.md       four extension surfaces, tool economics, skill budgets, MCP trust boundaries
+├── 04-failure-and-eval.md       MAST taxonomy, diagnosis table, three-layer eval, budgets, staged autonomy
+├── 05-sources.md                annotated sources (harness plugins, official docs, papers)
+├── loop_lab/                    prototype: one kernel, five scenarios, trace-by-trace comparison
+└── loopkit/                     the toolkit
+    ├── loopkit/advisor.py       brief → topology (rule engine, with reasons)
+    ├── loopkit/kernel.py        the loop: log, budgets, tool batches, stop predicate
+    ├── loopkit/patterns.py      react / chain / route / fanout / plan_execute_verify
+    ├── loopkit/tools.py         validation, guards, cache, dedup, bounded concurrency
+    ├── loopkit/llm.py           MockProvider / Tiered / OpenAI-compatible client
+    ├── bench/bench.py           measured baseline vs optimized
+    └── tests/test_loopkit.py    20 invariant tests
+```
+
+### Seven invariants
+
+1. The log is the only truth (and it can be replayed).
+2. Every tool call gets exactly one result — including failures.
+3. The stop condition lives outside the model.
+4. Four independent budgets: steps / tool calls / tokens / wall clock.
+5. Denial is a code path, not a prompt suggestion.
+6. The tool schema *is* the prompt — project only what the model needs.
+7. Irreversible actions are barriers: serial, uncached, approval-gated.
+
+### Limits
+
+- Simulated latency; real tail latency will lower the speedups.
+- Threads, not asyncio; no compaction and no persistent cache.
+- Advisor thresholds are heuristics that need calibration on real traces.
+- Research notes are written in Chinese; English lives in this README and in the key findings.
+
+### License
+
+Code: MIT. Research notes: CC BY 4.0.

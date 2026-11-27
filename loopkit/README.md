@@ -1,5 +1,6 @@
 ﻿# loopkit
 
+**完成率 33% → 60%，假完成 6 → 0。**
 **让 agent 在没做完时不能交卷。**
 *Stop the loop from calling it done before it is done.*
 
@@ -162,5 +163,6 @@ python -m unittest discover -s loopkit/tests -t loopkit
 - Python, threads rather than asyncio, not on PyPI.
 
 MIT License.
+
 
 

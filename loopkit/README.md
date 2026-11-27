@@ -1,4 +1,4 @@
-# loopkit
+﻿# loopkit
 
 **让 agent 在没做完时不能交卷。**
 *Stop the loop from calling it done before it is done.*
@@ -76,8 +76,8 @@ box = ToolBox({"read": read_file}, guard=guard)
 未发布 PyPI（`loopkit` 名字被占用，发布时改名）。直接放 `PYTHONPATH`：
 
 ```powershell
-git clone https://github.com/Yunzenn/harness-lab.git
-cd harness-lab && $env:PYTHONPATH="loopkit"
+git clone https://github.com/Yunzenn/loopkit.git
+cd loopkit && $env:PYTHONPATH="loopkit"
 python -m unittest discover -s loopkit/tests -t loopkit   # 39 tests
 ```
 
@@ -147,8 +147,8 @@ Same loop, only the call layer swapped: 50% fewer duplicate reads, 76% fewer run
 Not on PyPI yet (`loopkit` is taken). Put it on `PYTHONPATH`:
 
 ```powershell
-git clone https://github.com/Yunzenn/harness-lab.git
-cd harness-lab && $env:PYTHONPATH="loopkit"
+git clone https://github.com/Yunzenn/loopkit.git
+cd loopkit && $env:PYTHONPATH="loopkit"
 python -m unittest discover -s loopkit/tests -t loopkit
 ```
 
@@ -159,3 +159,4 @@ python -m unittest discover -s loopkit/tests -t loopkit
 - Python, threads rather than asyncio, not on PyPI.
 
 MIT License.
+

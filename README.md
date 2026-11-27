@@ -1,4 +1,4 @@
-# loopkit
+﻿# loopkit
 
 **Agent 说“完成了”，不算完成。**
 
@@ -67,8 +67,8 @@ while True:
 ## 怎么用
 
 ```powershell
-git clone https://github.com/Yunzenn/harness-lab.git
-cd harness-lab
+git clone https://github.com/Yunzenn/loopkit.git
+cd loopkit
 $env:PYTHONPATH="loopkit"
 
 python -m unittest discover -s loopkit/tests -t loopkit   # 39 tests
@@ -129,10 +129,11 @@ Real failures are not freezes: tickets drift (always `in_progress`, never resolv
 ## Use it
 
 ```powershell
-git clone https://github.com/Yunzenn/harness-lab.git
-cd harness-lab && $env:PYTHONPATH="loopkit"
+git clone https://github.com/Yunzenn/loopkit.git
+cd loopkit && $env:PYTHONPATH="loopkit"
 python -m unittest discover -s loopkit/tests -t loopkit
 python experiments/stasis/contract_eval.py experiments/stasis/model_traces.json
 ```
 
 MIT License.
+

@@ -1,4 +1,4 @@
-﻿# dsh-loopkit
+# dsh-loopkit
 
 **DSH 插件：在会话里问「这个任务该怎么编排」，拿到拓扑、预算、闸门和理由。**
 *A DSH plugin that recommends a workflow topology — with budgets, tool surface, gates, and reasons.*

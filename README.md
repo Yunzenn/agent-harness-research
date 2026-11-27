@@ -1,4 +1,4 @@
-﻿# loopkit
+# loopkit
 
 **Agent 说“完成了”，不算完成。**
 
@@ -34,7 +34,27 @@ while True:
         break
 ```
 
-## 效果（24 条真实轨迹）
+## 效果：同一模型，跑两遍
+
+30 次运行（3 个任务 × 5 seeds × 2 条件），唯一差别是有没有契约：
+
+| 任务 | 不用 loopkit | 用契约 |
+|---|---|---|
+| batch（摘要 6 篇） | 5/5 完成 · 0 假完成 | 5/5 完成 · 0 假完成 |
+| tickets（结 6 单） | 0/5 完成 · 1 假完成 · 进度 0.20 | 0/5 完成 · 0 假完成 · 进度 0.53 |
+| rag（答 6 题） | **0/5 完成 · 5 假完成** | **4/5 完成 · 0 假完成** |
+| **合计** | **5/15 完成 · 6 次假完成** | **9/15 完成 · 0 次假完成** |
+
+![false done](experiments/stasis/figures/ab-false-done.png)
+
+![progress](experiments/stasis/figures/ab-progress.png)
+
+诚实的部分：
+
+- tickets 契约也没让它做完（7B 的能力上限），但把假完成清零、进度从 0.20 拉到 0.53；
+- rag 的调用从 3.4 涨到 11——因为它终于真的去做了。**这里的目标是"别交半成品"，不是"省调用"。**
+
+### 另一个角度：三个检测器，24 条轨迹
 
 | 检测方式 | 抓到失败 | 误报 |
 |---|---:|---:|
@@ -43,8 +63,6 @@ while True:
 | **契约（done_when + advances）** | **16/16** | **0** |
 
 ![detectors](experiments/stasis/figures/detectors.png)
-
-附带收益：在失败轨迹里提前停止，省下 **51%** 的工具调用（全部轨迹口径 30%）。
 
 真实失败长这样，不是“卡死”：
 
@@ -108,15 +126,20 @@ contract = Contract(
 mon = ContractMonitor(contract, stall_steps=4)
 ```
 
-## Result (24 real traces)
+## Result: same model, run twice
 
-| Check | Failures caught | False flags |
-|---|---:|---:|
-| “did the world change?” | 0/16 | 0 |
-| “did progress stall?” | 8/16 | 0 |
-| **contract (done_when + advances)** | **16/16** | **0** |
+30 runs (3 tasks × 5 seeds × 2 conditions). The only difference is the contract:
 
-Bonus: stopping early saves **51%** of tool calls inside failed runs (30% across all runs).
+| Task | Without loopkit | With the contract |
+|---|---|---|
+| batch (summarise 6 docs) | 5/5 correct · 0 false done | 5/5 correct · 0 false done |
+| tickets (resolve 6) | 0/5 correct · 1 false done · progress 0.20 | 0/5 correct · 0 false done · progress 0.53 |
+| rag (answer 6) | **0/5 correct · 5 false done** | **4/5 correct · 0 false done** |
+| **Total** | **5/15 correct · 6 false done** | **9/15 correct · 0 false done** |
+
+Honest notes: on `tickets` the contract still cannot make a 7B model finish, but it removes the false
+“done” and raises progress from 0.20 to 0.53; on `rag` calls go from 3.4 to 11 — because the model finally
+does the work. **The goal is “no half-finished deliveries”, not “fewer calls”.**
 
 Real failures are not freezes: tickets drift (always `in_progress`, never resolved), rag stops at 17–83% and calls it done.
 

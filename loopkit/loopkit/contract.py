@@ -43,6 +43,7 @@ class Contract:
     advances: Callable[[Any], float]
     never: Optional[Callable[[str, dict, Any], Optional[str]]] = None
     stall_steps: int = 4
+    hint: Optional[Callable[[Any], str]] = None
 
 
 class ContractMonitor:
@@ -106,6 +107,12 @@ class ContractMonitor:
         return None
 
     # -- results -----------------------------------------------------------
+    def guidance(self, world: Any = None) -> str:
+        """Optional next-step text, used when a premature stop is rejected."""
+        if self.contract is None or self.contract.hint is None:
+            return ""
+        return self.contract.hint(world)
+
     def _flag(self, violation: Violation) -> Violation:
         if not any(v.kind == violation.kind and v.message == violation.message for v in self.violations):
             self.violations.append(violation)

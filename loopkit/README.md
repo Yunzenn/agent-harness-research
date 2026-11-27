@@ -1,4 +1,4 @@
-﻿# loopkit
+# loopkit
 
 **让 agent 在没做完时不能交卷。**
 *Stop the loop from calling it done before it is done.*
@@ -47,6 +47,9 @@ mon.before_call("set_ticket", args, world)      # 违反 never → churn
 | **契约（done_when + advances）** | **16/16** | **0** |
 
 ![detectors](../experiments/stasis/figures/detectors.png)
+
+A/B（30 次运行，同一模型）：**假完成 6 → 0，真正完成 5/15 → 9/15**（rag 0/5 → 4/5）。
+详见 [`experiments/stasis/`](../experiments/stasis/)。
 
 附带收益：失败轨迹里提前停止省下 **51%** 的工具调用（全部轨迹口径 30%）。
 

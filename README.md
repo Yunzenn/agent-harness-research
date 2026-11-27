@@ -1,16 +1,26 @@
-# loopkit
+﻿# looprise
 
-**Agent 说“完成了”，不算完成。**
+**完成率 33% → 60%，假完成 6 次 → 0 次。**
 
-我们用本地模型跑了 24 次真实任务：**16 次没有真正完成**——8 次宣布完成时只做了 17%，8 次忙了十几步、进度始终是 0。
+同一模型、同一批任务、同一套工具，唯一差别是加了一份“完成”检查。
 
-现有工具都管不了这件事：
+30 次 A/B（本地 7B 模型）：
+
+| | 不用 | 用了 |
+|---|---|---|
+| 真正完成 | 5/15（33%） | **9/15（60%）** |
+| 没做完却报“完成” | 6 次 | **0 次** |
+| rag 任务完成率 | 0/5 | **4/5** |
+
+它解决的问题很具体：**模型说“做完了”，但它没做完。**
 
 - `max_iterations` / `recursion_limit` 只管**步数**，不知道活干完没有；
 - Langfuse 之类只负责**看见**，不拦；
 - LoopGain 那类收敛检测需要**可测量的 error signal**，而工具型循环（读文件、改工单）根本没有。
 
-loopkit 只做一件事：**用 10 行把“完成”写成条件，然后在每次工具调用和结束点检查它。**
+looprise 只做一件事：**用 10 行把“完成”写成条件，然后在每次工具调用和结束点检查它。**
+
+> 仓库叫 looprise，Python 包名仍是 `loopkit`（PyPI 上 `loopkit` 已被占用，发布时改名）。
 
 ```python
 from loopkit import Contract, ContractMonitor
@@ -85,8 +95,8 @@ while True:
 ## 怎么用
 
 ```powershell
-git clone https://github.com/Yunzenn/loopkit.git
-cd loopkit
+git clone https://github.com/Yunzenn/looprise.git
+cd looprise
 $env:PYTHONPATH="loopkit"
 
 python -m unittest discover -s loopkit/tests -t loopkit   # 39 tests
@@ -107,13 +117,23 @@ MIT License.
 
 # English
 
-**“Done” is not done until the goal state says so.**
+**Completion 33% → 60%. False “done” 6 → 0.**
 
-Across 24 real runs of a local model, **16 never actually finished**: 8 declared completion at 17% progress, 8 spent a dozen steps with progress pinned at 0.
+Same model, same tasks, same tools — the only difference is one completion check.
+
+30 A/B runs (local 7B model):
+
+| | without | with |
+|---|---|---|
+| Actually completed | 5/15 (33%) | **9/15 (60%)** |
+| Claimed done while incomplete | 6 | **0** |
+| rag completion | 0/5 | **4/5** |
 
 `max_iterations` counts steps, not completion. Langfuse shows you the problem but cannot stop it. LoopGain-style convergence checks need a measurable error signal — tool loops (read a file, update a ticket) have none.
 
-loopkit does one thing: **write “done” as a condition, then check it at every tool call and at the end.**
+looprise does one thing: **write “done” as a condition, then check it at every tool call and at the end.**
+
+> Repo is `looprise`; the Python package is still `loopkit` (`loopkit` is taken on PyPI).
 
 ```python
 from loopkit import Contract, ContractMonitor
@@ -152,11 +172,12 @@ Real failures are not freezes: tickets drift (always `in_progress`, never resolv
 ## Use it
 
 ```powershell
-git clone https://github.com/Yunzenn/loopkit.git
-cd loopkit && $env:PYTHONPATH="loopkit"
+git clone https://github.com/Yunzenn/looprise.git
+cd looprise && $env:PYTHONPATH="loopkit"
 python -m unittest discover -s loopkit/tests -t loopkit
 python experiments/stasis/contract_eval.py experiments/stasis/model_traces.json
 ```
 
 MIT License.
+
 

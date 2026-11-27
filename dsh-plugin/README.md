@@ -32,7 +32,7 @@
 
 ```powershell
 # 装进某个 profile（本地路径）
-dsh plugin --profile web add D:\path\to\loopkit\dsh-plugin
+dsh plugin --profile web add D:\path\to\looprise\dsh-plugin
 ```
 
 或在 profile 的 `cordis.patch.yml` 里插入：
@@ -128,7 +128,7 @@ It is also side-effect free: no file reads, no network, no model calls.
 Plain ESM; `@deepseek-ai/dsh-tools` is a peer dependency provided by the host.
 
 ```powershell
-dsh plugin --profile web add D:\path\to\loopkit\dsh-plugin
+dsh plugin --profile web add D:\path\to\looprise\dsh-plugin
 ```
 
 Or insert it into the profile's `cordis.patch.yml`:
@@ -172,4 +172,5 @@ The rules mirror `loopkit/advisor.py` one-to-one; change both sides together.
 - Requires the host-injected `tools` service; it cannot run standalone in plain Node.
 
 MIT License.
+
 

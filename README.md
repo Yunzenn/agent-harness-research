@@ -1,173 +1,138 @@
-﻿# Harness Lab
+# loopkit
 
-**给已有 agent loop 加装的一层：更少调用、更硬的停止、可回放的轨迹。**
-*A hardening layer for loops you already have — fewer calls, hard stops, replayable traces.*
+**Agent 说“完成了”，不算完成。**
 
-[中文](#中文) · [English](#english)
+我们用本地模型跑了 24 次真实任务：**16 次没有真正完成**——8 次宣布完成时只做了 17%，8 次忙了十几步、进度始终是 0。
 
-![tests](https://img.shields.io/badge/tests-30%20passing-brightgreen)
-![python](https://img.shields.io/badge/python-3.10%2B-blue)
-![node](https://img.shields.io/badge/node-20%2B-339933)
-![license](https://img.shields.io/badge/license-MIT-yellow)
+现有工具都管不了这件事：
 
----
+- `max_iterations` / `recursion_limit` 只管**步数**，不知道活干完没有；
+- Langfuse 之类只负责**看见**，不拦；
+- LoopGain 那类收敛检测需要**可测量的 error signal**，而工具型循环（读文件、改工单）根本没有。
 
-<a id="中文"></a>
-## 中文
-
-### 它做什么
-
-不造框架。你的 while 循环 / LangGraph 图 / DSH 会话一行不改，外面包三个调用：
+loopkit 只做一件事：**用 10 行把“完成”写成条件，然后在每次工具调用和结束点检查它。**
 
 ```python
-from loopkit.upgrade import GuardConfig, LoopGuard, ToolBox, ToolDenied
+from loopkit import Contract, ContractMonitor
 
-guard = LoopGuard(GuardConfig(max_steps=12, max_tool_calls=20, cache_ttl_s=60))
-box = ToolBox({"read": read_file, "run_tests": run_tests}, guard=guard)
+contract = Contract(
+    name="resolve tickets",
+    done_when=lambda w: all(v == "resolved" for v in w.tickets.values()),
+    advances=lambda w: sum(v == "resolved" for v in w.tickets.values()) / 6,
+)
+mon = ContractMonitor(contract, stall_steps=4)
 
 while True:
-    if guard.begin_step(tokens_in=usage):        # 预算/墙钟到了就停
-        break
-    try:
-        out = box.call("read", {"path": "a.py"})  # 缓存 + 重复拦截
-    except ToolDenied as exc:
-        out = f"skipped: {exc.reason}"            # 拒绝是数据，不是崩溃
+    call = model.next(...)
+    result = box.call(call.name, call.args)
+    mon.observe(world)                  # 进度 4 步不涨 → drift
+    mon.before_call(call.name, call.args, world)   # 违反 never → churn
 
-print(guard.finish().as_row())
+    if call.name == "finish":
+        if mon.before_stop(world):      # 没做完就想结束 → premature_stop
+            continue                    # 不许交卷
+        break
 ```
 
-| 能力 | 机制 | 可测指标 |
+## 效果（24 条真实轨迹）
+
+| 检测方式 | 抓到失败 | 误报 |
+|---|---:|---:|
+| 看“世界有没有变化” | 0/16 | 0 |
+| 看“进度是否停滞” | 8/16 | 0 |
+| **契约（done_when + advances）** | **16/16** | **0** |
+
+![detectors](experiments/stasis/figures/detectors.png)
+
+附带收益：在失败轨迹里提前停止，省下 **51%** 的工具调用（全部轨迹口径 30%）。
+
+真实失败长这样，不是“卡死”：
+
+| 负载 | 结局 | 模型在干什么 |
 |---|---|---|
-| **花得少** | 工具缓存、批内去重、有界并发 | 真实执行次数 ↓、墙钟 ↓ |
-| **停得对** | 四本预算、重复调用拦截、破坏性操作审批 | 失控 loop 100% 在预算内停 |
-| **看得见** | `LoopStats` + `trace.jsonl` | 每步/每调用可回放 |
+| batch | 8/8 完成 | 逐篇读、逐篇写摘要 |
+| tickets | 8/8 漂移 | `get → set(in_progress) → append("Working on it.")`，从不结单 |
+| rag | 8/8 早停 | 答到 0.17–0.83 就宣布 DONE |
 
-### 实测：同一个 loop，只换调用层
+## 为什么是你需要的
 
-工具耗时 40ms，同一段循环代码跑两遍（`bench/uplift_bench.py`）：
+不是“又一个 agent 框架”，也不是“又一个看板”：
 
-| 场景 | 裸循环执行 | 加装后 | 降幅 | 墙钟降幅 | 停止原因 |
-|---|---:|---:|---:|---:|---|
-| 12 个工单（重复读两遍） | 24 | 12 | **−50%** | −50% | loop_exit |
-| 失控重试（永不收敛） | 50 | 12 | **−76%** | −76% | `max_tool_calls` |
-| 同一调用重复 10 次 | 10 | 3 | **−70%** | −70% | loop_exit |
+- **不改你的循环**：包住工具调用和结束点，三行；
+- **不需要 error signal**：判据是任务状态，不是 loss；
+- **确定性**：不调模型、不猜阈值，同样的轨迹永远同样的结论。
 
-注意第三行：**不是把一次调用变快，而是拒绝执行第 4 次**。
+适合：把 agent 放进生产、被“假完成”坑过、又没有 verifier 的团队。
 
-### 为什么不是框架
-
-框架要接管控制流，代价是迁移。我们只做两件事：**门**（预算/审批/重复）和**账**（指标/轨迹）。
-
-判断标准：**去掉这一层，你的 loop 还能跑吗？** 能，才是加装。
-
-### 仓库内容
-
-| 路径 | 是什么 |
-|---|---|
-| `loopkit/upgrade.py` | **主线**：`LoopGuard` + `ToolBox` + 统计/轨迹 |
-| `loopkit/`（kernel、patterns、advisor） | 参考实现：用来跑基准、验证"哪种拓扑更便宜" |
-| `dsh-plugin/` | advisor 的 DSH 接入（下一步接 guard） |
-| `01`–`05` 笔记 | 研究背景：循环不变量、场景→拓扑、工具/技能/MCP、失败与评估 |
-| `docs/POSITIONING.md` | 定位、非目标、验收标准 |
-| `experiments/stasis/` | 真实模型实验：24 条轨迹、三个检测器对比、契约层验证 |
-
-### 不做
-
-❌ 通用图引擎 · ❌ MCP/记忆/向量库 · ❌ 托管平台/UI · ❌ 多 agent 协议 · ❌ 流式取舍（宿主决定）
-
-### 快速开始
+## 怎么用
 
 ```powershell
 git clone https://github.com/Yunzenn/harness-lab.git
 cd harness-lab
 $env:PYTHONPATH="loopkit"
 
-python -m unittest discover -s loopkit/tests -t loopkit   # 30 tests
-python loopkit/bench/uplift_bench.py                      # 本页的实测表
-python -m loopkit demo                                    # 参考实现：一个 kernel，四种控制流
+python -m unittest discover -s loopkit/tests -t loopkit   # 39 tests
+python experiments/stasis/contract_eval.py experiments/stasis/model_traces.json   # 复现 16/16
 ```
 
-### 局限
+实验代码与轨迹在 [`experiments/stasis/`](experiments/stasis/)，定位与非目标在 [`docs/POSITIONING.md`](docs/POSITIONING.md)。
 
-工具是模拟延迟；线程而非 asyncio；尚未发布 PyPI（`loopkit` 名字已被占用，将改名发布）；没有真实模型的数字。
+## 边界
 
----
-
-<a id="english"></a>
-## English
-
-### What it does
-
-No new framework. Keep your `while` loop, your LangGraph graph, your DSH session — wrap three calls around it:
-
-```python
-from loopkit.upgrade import GuardConfig, LoopGuard, ToolBox, ToolDenied
-
-guard = LoopGuard(GuardConfig(max_steps=12, max_tool_calls=20, cache_ttl_s=60))
-box = ToolBox({"read": read_file, "run_tests": run_tests}, guard=guard)
-
-while True:
-    if guard.begin_step(tokens_in=usage):
-        break
-    try:
-        out = box.call("read", {"path": "a.py"})
-    except ToolDenied as exc:
-        out = f"skipped: {exc.reason}"
-
-print(guard.finish().as_row())
-```
-
-| Capability | Mechanism | Measurable |
-|---|---|---|
-| **Spend less** | tool cache, batch de-dup, bounded concurrency | real executions ↓, wall clock ↓ |
-| **Stop right** | four budgets, repeat interception, approval gates | runaway loops stop 100% |
-| **See it** | `LoopStats` + `trace.jsonl` | every step replayable |
-
-### Measured: same loop, only the call layer swapped
-
-40 ms tools, the same loop body run twice (`bench/uplift_bench.py`):
-
-| Scenario | Bare executions | Wrapped | Δ | Wall Δ | Stop |
-|---|---:|---:|---:|---:|---|
-| 12 tickets (read twice) | 24 | 12 | **−50%** | −50% | loop_exit |
-| Runaway retry (never converges) | 50 | 12 | **−76%** | −76% | `max_tool_calls` |
-| Same call x10 | 10 | 3 | **−70%** | −70% | loop_exit |
-
-The third row is the point: it does not make a call faster, it **refuses the fourth one**.
-
-### Why not a framework
-
-A framework takes over control flow and charges you a migration. This only adds a **gate** (budgets, approval, repeats) and a **ledger** (stats, traces).
-
-Test: **remove the layer — does your loop still run?** If yes, it is an upgrade, not a rewrite.
-
-### Layout
-
-| Path | What |
-|---|---|
-| `loopkit/upgrade.py` | **the main line**: guard, toolbox, stats, traces |
-| `loopkit/` (kernel, patterns, advisor) | reference implementation used to run the benchmarks |
-| `dsh-plugin/` | DSH integration of the advisor |
-| `01`–`05` notes | background research |
-| `docs/POSITIONING.md` | positioning, non-goals, acceptance criteria |
-
-### Out of scope
-
-Graph engine · MCP/memory/vector DB · hosting/UI · multi-agent protocols · streaming policy.
-
-### Quickstart
-
-```powershell
-git clone https://github.com/Yunzenn/harness-lab.git
-cd harness-lab
-$env:PYTHONPATH="loopkit"
-python -m unittest discover -s loopkit/tests -t loopkit
-python loopkit/bench/uplift_bench.py
-```
-
-### Limits
-
-Simulated tool latency; threads rather than asyncio; not on PyPI yet (`loopkit` is taken); no real-model numbers yet.
+- 契约要你自己写——**这正是产品的重点**：把“完成”定义清楚，本来就是设计工作；
+- 目前只在 3 类工具任务、24 条轨迹上验证；没有 verifier 的业务（客服、数据清洗）还需要更多验证；
+- Python，未上 PyPI；`loopkit` 这个名字在 PyPI 被占用，发布时会改名。
 
 MIT License.
 
+---
+
+# English
+
+**“Done” is not done until the goal state says so.**
+
+Across 24 real runs of a local model, **16 never actually finished**: 8 declared completion at 17% progress, 8 spent a dozen steps with progress pinned at 0.
+
+`max_iterations` counts steps, not completion. Langfuse shows you the problem but cannot stop it. LoopGain-style convergence checks need a measurable error signal — tool loops (read a file, update a ticket) have none.
+
+loopkit does one thing: **write “done” as a condition, then check it at every tool call and at the end.**
+
+```python
+from loopkit import Contract, ContractMonitor
+
+contract = Contract(
+    name="resolve tickets",
+    done_when=lambda w: all(v == "resolved" for v in w.tickets.values()),
+    advances=lambda w: sum(v == "resolved" for v in w.tickets.values()) / 6,
+)
+mon = ContractMonitor(contract, stall_steps=4)
+```
+
+## Result (24 real traces)
+
+| Check | Failures caught | False flags |
+|---|---:|---:|
+| “did the world change?” | 0/16 | 0 |
+| “did progress stall?” | 8/16 | 0 |
+| **contract (done_when + advances)** | **16/16** | **0** |
+
+Bonus: stopping early saves **51%** of tool calls inside failed runs (30% across all runs).
+
+Real failures are not freezes: tickets drift (always `in_progress`, never resolved), rag stops at 17–83% and calls it done.
+
+## Why it is different
+
+- **No new framework**: wrap your tool call and your exit point — three lines.
+- **No error signal needed**: the judge is task state, not a loss.
+- **Deterministic**: no model calls, no thresholds — the same trace always yields the same verdict.
+
+## Use it
+
+```powershell
+git clone https://github.com/Yunzenn/harness-lab.git
+cd harness-lab && $env:PYTHONPATH="loopkit"
+python -m unittest discover -s loopkit/tests -t loopkit
+python experiments/stasis/contract_eval.py experiments/stasis/model_traces.json
+```
+
+MIT License.

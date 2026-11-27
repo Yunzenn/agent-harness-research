@@ -1,4 +1,4 @@
-# loopkit
+﻿# loopkit
 
 **给已有 loop 加装的一层：预算、去重缓存、重复拦截、轨迹指标。**
 *A hardening layer for loops you already have: budgets, caching, repeat interception, traces.*
@@ -50,13 +50,15 @@ while True:
 - **drifting**：一直在调工具，进度不动（例：反复 `set_ticket(in_progress)`，从不结单）
 - **premature_stop**：没做完就说 DONE
 
-在 9 条真实轨迹上的检测效果：
+在 24 条真实轨迹（qwen2.5-coder:7b，3 个工具任务 × 8 seeds）上的检测效果：
 
 | 检测方式 | 抓到 | 需要什么 |
 |---|---:|---|
-| 只看世界/结果有没有变 | **0/6** | 无 |
-| 看进度是否停滞 | 3/6 | 进度函数 |
-| **契约（done_when + advances + never）** | **6/6** | 一份声明 |
+| 只看世界/结果有没有变 | **0/16** | 无 |
+| 看进度是否停滞 | 8/16 | 进度函数 |
+| **契约（done_when + advances + never）** | **16/16** | 一份声明 |
+
+![detectors](../experiments/stasis/figures/detectors.png)
 
 ```python
 from loopkit import Contract, ContractMonitor
@@ -73,7 +75,7 @@ mon.before_stop(world)             # 想结束时 → 目标没达成报 prematu
 mon.before_call("set", args, world)  # 可选：违反 never 的调用报 churn
 ```
 
-线上回放这 9 条轨迹：**6/6 抓住、0 误报、提前停止省下 30% 的工具调用**。
+线上回放这 24 条轨迹：**16/16 抓住、0 误报、提前停止省下 30% 的工具调用**（失败轨迹内部省 51%）。
 
 下面的内容（advisor、kernel、patterns）是**参考实现**：它们存在的意义是让"选型"和"加速"可测量，而不是让你迁移过去。
 
@@ -460,4 +462,5 @@ Any `/chat/completions` endpoint works. `transport` is injectable, so request/re
 - [ ] Re-run the benchmark against a real model
 
 MIT License.
+
 

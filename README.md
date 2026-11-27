@@ -1,4 +1,4 @@
-# Harness Lab
+﻿# Harness Lab
 
 **给已有 agent loop 加装的一层：更少调用、更硬的停止、可回放的轨迹。**
 *A hardening layer for loops you already have — fewer calls, hard stops, replayable traces.*
@@ -69,6 +69,7 @@ print(guard.finish().as_row())
 | `dsh-plugin/` | advisor 的 DSH 接入（下一步接 guard） |
 | `01`–`05` 笔记 | 研究背景：循环不变量、场景→拓扑、工具/技能/MCP、失败与评估 |
 | `docs/POSITIONING.md` | 定位、非目标、验收标准 |
+| `experiments/stasis/` | 真实模型实验：24 条轨迹、三个检测器对比、契约层验证 |
 
 ### 不做
 
@@ -169,3 +170,4 @@ python loopkit/bench/uplift_bench.py
 Simulated tool latency; threads rather than asyncio; not on PyPI yet (`loopkit` is taken); no real-model numbers yet.
 
 MIT License.
+

@@ -1,0 +1,258 @@
+[
+ {
+  "scenario": "batch_docs",
+  "kind": "healthy",
+  "k": 3,
+  "rate": 0.0,
+  "lag": null,
+  "n": 20
+ },
+ {
+  "scenario": "batch_docs",
+  "kind": "healthy",
+  "k": 4,
+  "rate": 0.0,
+  "lag": null,
+  "n": 20
+ },
+ {
+  "scenario": "batch_docs",
+  "kind": "healthy",
+  "k": 5,
+  "rate": 0.0,
+  "lag": null,
+  "n": 20
+ },
+ {
+  "scenario": "batch_docs",
+  "kind": "healthy",
+  "k": 6,
+  "rate": 0.0,
+  "lag": null,
+  "n": 20
+ },
+ {
+  "scenario": "batch_docs",
+  "kind": "stall",
+  "k": 3,
+  "rate": 1.0,
+  "lag": 3.0,
+  "n": 20
+ },
+ {
+  "scenario": "batch_docs",
+  "kind": "stall",
+  "k": 4,
+  "rate": 1.0,
+  "lag": 4.0,
+  "n": 20
+ },
+ {
+  "scenario": "batch_docs",
+  "kind": "stall",
+  "k": 5,
+  "rate": 1.0,
+  "lag": 5.0,
+  "n": 20
+ },
+ {
+  "scenario": "batch_docs",
+  "kind": "stall",
+  "k": 6,
+  "rate": 1.0,
+  "lag": 6.0,
+  "n": 20
+ },
+ {
+  "scenario": "tickets",
+  "kind": "healthy",
+  "k": 3,
+  "rate": 0.0,
+  "lag": null,
+  "n": 20
+ },
+ {
+  "scenario": "tickets",
+  "kind": "healthy",
+  "k": 4,
+  "rate": 0.0,
+  "lag": null,
+  "n": 20
+ },
+ {
+  "scenario": "tickets",
+  "kind": "healthy",
+  "k": 5,
+  "rate": 0.0,
+  "lag": null,
+  "n": 20
+ },
+ {
+  "scenario": "tickets",
+  "kind": "healthy",
+  "k": 6,
+  "rate": 0.0,
+  "lag": null,
+  "n": 20
+ },
+ {
+  "scenario": "tickets",
+  "kind": "stall",
+  "k": 3,
+  "rate": 1.0,
+  "lag": 3.0,
+  "n": 20
+ },
+ {
+  "scenario": "tickets",
+  "kind": "stall",
+  "k": 4,
+  "rate": 1.0,
+  "lag": 4.0,
+  "n": 20
+ },
+ {
+  "scenario": "tickets",
+  "kind": "stall",
+  "k": 5,
+  "rate": 1.0,
+  "lag": 5.0,
+  "n": 20
+ },
+ {
+  "scenario": "tickets",
+  "kind": "stall",
+  "k": 6,
+  "rate": 1.0,
+  "lag": 6.0,
+  "n": 20
+ },
+ {
+  "scenario": "rag",
+  "kind": "healthy",
+  "k": 3,
+  "rate": 0.0,
+  "lag": null,
+  "n": 20
+ },
+ {
+  "scenario": "rag",
+  "kind": "healthy",
+  "k": 4,
+  "rate": 0.0,
+  "lag": null,
+  "n": 20
+ },
+ {
+  "scenario": "rag",
+  "kind": "healthy",
+  "k": 5,
+  "rate": 0.0,
+  "lag": null,
+  "n": 20
+ },
+ {
+  "scenario": "rag",
+  "kind": "healthy",
+  "k": 6,
+  "rate": 0.0,
+  "lag": null,
+  "n": 20
+ },
+ {
+  "scenario": "rag",
+  "kind": "stall",
+  "k": 3,
+  "rate": 1.0,
+  "lag": 3.0,
+  "n": 20
+ },
+ {
+  "scenario": "rag",
+  "kind": "stall",
+  "k": 4,
+  "rate": 1.0,
+  "lag": 4.0,
+  "n": 20
+ },
+ {
+  "scenario": "rag",
+  "kind": "stall",
+  "k": 5,
+  "rate": 1.0,
+  "lag": 5.0,
+  "n": 20
+ },
+ {
+  "scenario": "rag",
+  "kind": "stall",
+  "k": 6,
+  "rate": 1.0,
+  "lag": 6.0,
+  "n": 20
+ },
+ {
+  "scenario": "read_heavy",
+  "kind": "healthy",
+  "k": 3,
+  "rate": 0.0,
+  "lag": null,
+  "n": 20
+ },
+ {
+  "scenario": "read_heavy",
+  "kind": "healthy",
+  "k": 4,
+  "rate": 0.0,
+  "lag": null,
+  "n": 20
+ },
+ {
+  "scenario": "read_heavy",
+  "kind": "healthy",
+  "k": 5,
+  "rate": 0.0,
+  "lag": null,
+  "n": 20
+ },
+ {
+  "scenario": "read_heavy",
+  "kind": "healthy",
+  "k": 6,
+  "rate": 0.0,
+  "lag": null,
+  "n": 20
+ },
+ {
+  "scenario": "rephrase",
+  "kind": "stall",
+  "k": 3,
+  "rate": 0.0,
+  "lag": null,
+  "n": 20
+ },
+ {
+  "scenario": "rephrase",
+  "kind": "stall",
+  "k": 4,
+  "rate": 0.0,
+  "lag": null,
+  "n": 20
+ },
+ {
+  "scenario": "rephrase",
+  "kind": "stall",
+  "k": 5,
+  "rate": 0.0,
+  "lag": null,
+  "n": 20
+ },
+ {
+  "scenario": "rephrase",
+  "kind": "stall",
+  "k": 6,
+  "rate": 0.0,
+  "lag": null,
+  "n": 20
+ }
+]

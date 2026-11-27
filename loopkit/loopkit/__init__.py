@@ -14,6 +14,7 @@ The public surface is deliberately small:
 """
 
 from .advisor import Brief, Plan, Runnable, advise
+from .contract import Contract, ContractMonitor, Violation
 from .kernel import Harness
 from .llm import MockProvider, OpenAICompatProvider, Tiered
 from .patterns import Lane, Stage, WorkerResult, chain, fanout, human_gate, plan_execute_verify, react, route
@@ -28,6 +29,8 @@ __all__ = [
     "Action",
     "Brief",
     "Budget",
+    "Contract",
+    "ContractMonitor",
     "GuardConfig",
     "Harness",
     "Lane",
@@ -50,6 +53,7 @@ __all__ = [
     "ToolDenied",
     "ToolError",
     "ToolResult",
+    "Violation",
     "WorkerResult",
     "advise",
     "chain",

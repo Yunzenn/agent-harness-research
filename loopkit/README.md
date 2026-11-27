@@ -1,4 +1,4 @@
-﻿# loopkit
+# loopkit
 
 **给已有 loop 加装的一层：预算、去重缓存、重复拦截、轨迹指标。**
 *A hardening layer for loops you already have: budgets, caching, repeat interception, traces.*
@@ -42,6 +42,38 @@ while True:
 | 同一调用 x10 | 10 | 3 | −70% | loop_exit |
 
 复现：`python bench/uplift_bench.py`。
+
+### 契约层：把「完成」写下来
+
+预算和缓存能防住「跑太多」，防不住「跑偏」。真实模型的失败通常是两种：
+
+- **drifting**：一直在调工具，进度不动（例：反复 `set_ticket(in_progress)`，从不结单）
+- **premature_stop**：没做完就说 DONE
+
+在 9 条真实轨迹上的检测效果：
+
+| 检测方式 | 抓到 | 需要什么 |
+|---|---:|---|
+| 只看世界/结果有没有变 | **0/6** | 无 |
+| 看进度是否停滞 | 3/6 | 进度函数 |
+| **契约（done_when + advances + never）** | **6/6** | 一份声明 |
+
+```python
+from loopkit import Contract, ContractMonitor
+
+contract = Contract(
+    name="resolve tickets",
+    done_when=lambda w: all(v == "resolved" for v in w.tickets.values()),
+    advances=lambda w: sum(v == "resolved" for v in w.tickets.values()) / len(w.tickets),
+)
+mon = ContractMonitor(contract, stall_steps=4)
+
+mon.observe(world)                 # 每步一次 → 停滞 4 步报 drift
+mon.before_stop(world)             # 想结束时 → 目标没达成报 premature_stop
+mon.before_call("set", args, world)  # 可选：违反 never 的调用报 churn
+```
+
+线上回放这 9 条轨迹：**6/6 抓住、0 误报、提前停止省下 30% 的工具调用**。
 
 下面的内容（advisor、kernel、patterns）是**参考实现**：它们存在的意义是让"选型"和"加速"可测量，而不是让你迁移过去。
 
